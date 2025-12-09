@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorando la Curva de Campana | Innova Schools</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Configuración de Tailwind y Estilos Personalizados (Innova Schools Palette) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7fc',
+                            100: '#e0eff9',
+                            500: '#005788', // Azul Innova (Principal)
+                            600: '#00456b',
+                            900: '#002e47',
+                        },
+                        accent: {
+                            light: '#fcefd9',
+                            DEFAULT: '#F28E00', // Naranja Innova
+                            dark: '#c77500'
+                        },
+                        innovaGreen: {
+                            DEFAULT: '#78BE20', // Verde Innova (Ojo de Agua)
+                            light: '#eef8e0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Reset & Basics */
+        body {
+            background-color: #f8fafc;
+            color: #334155;
+        }
+
+        /* CHART CONTAINER STYLING */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            border-top: 4px solid #005788; /* Detalle Azul Innova */
+        }
+
+        .chart-wrapper-std {
+            max-width: 800px;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        .chart-wrapper-lg {
+            max-width: 900px;
+            height: 450px;
+            max-height: 500px;
+        }
+
+        @media (max-width: 640px) {
+            .chart-wrapper-std, .chart-wrapper-lg {
+                height: 300px;
+            }
+        }
+
+        /* Interactive Elements */
+        .nav-btn {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        .nav-btn.active {
+            color: #005788;
+            border-bottom: 3px solid #78BE20; /* Subrayado Verde Innova */
+            background-color: #f0f7fc;
+            font-weight: 700;
+        }
+        .nav-btn:hover {
+            color: #F28E00; /* Hover Naranja */
+        }
+        
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: #78BE20; /* Borde verde al pasar el mouse */
+        }
+        
+        /* Custom Button Styles */
+        .btn-primary {
+            background-color: #005788;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #00456b;
+        }
+        
+        .btn-accent {
+            background-color: #F28E00;
+            color: white;
+        }
+        .btn-accent:hover {
+            background-color: #d17a00;
+        }
+
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm h-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+            <div class="flex justify-between items-center h-full">
+                <!-- LOGO SECTION -->
+                <div class="flex items-center flex-shrink-0">
+                    <img src="data:image/png;base64,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" alt="Innova Schools Ojo de Agua" class="h-16 w-auto object-contain">
+                </div>
+                
+                <!-- Desktop Nav -->
+                <div class="hidden md:flex space-x-2 items-center h-full">
+                    <button onclick="navTo('intro')" class="nav-btn active px-4 h-full flex items-center text-sm font-medium text-gray-600" id="btn-intro">Inicio</button>
+                    <button onclick="navTo('anatomy')" class="nav-btn px-4 h-full flex items-center text-sm font-medium text-gray-600" id="btn-anatomy">Anatomía</button>
+                    <button onclick="navTo('empirical')" class="nav-btn px-4 h-full flex items-center text-sm font-medium text-gray-600" id="btn-empirical">Regla Empírica</button>
+                    <button onclick="navTo('realworld')" class="nav-btn px-4 h-full flex items-center text-sm font-medium text-gray-600" id="btn-realworld">Vida Diaria</button>
+                    <button onclick="navTo('research')" class="nav-btn px-4 h-full flex items-center text-sm font-medium text-gray-600" id="btn-research">Investigación</button>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <div class="flex items-center md:hidden">
+                    <button onclick="toggleMobileMenu()" class="text-brand-500 hover:text-accent focus:outline-none p-2">
+                        <span class="text-3xl">☰</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Nav Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 absolute w-full shadow-lg">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="navTo('intro')" class="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-500">Inicio</button>
+                <button onclick="navTo('anatomy')" class="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-500">Anatomía</button>
+                <button onclick="navTo('empirical')" class="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-500">Regla Empírica</button>
+                <button onclick="navTo('realworld')" class="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-500">Vida Diaria</button>
+                <button onclick="navTo('research')" class="block w-full text-left px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-500">Investigación</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow bg-slate-50 relative overflow-hidden">
+
+        <!-- SECTION 1: INTRO / HERO -->
+        <section id="section-intro" class="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+            <div class="max-w-3xl mx-auto space-y-8">
+                <div class="inline-block p-4 rounded-full bg-brand-50 text-brand-500 mb-4 border border-brand-100">
+                    <span class="text-4xl">📊</span>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight">
+                    La Distribución <span class="text-brand-500">Normal</span>
+                </h1>
+                <p class="text-xl md:text-2xl text-slate-600 leading-relaxed">
+                    ¿Por qué la mayoría de los fenómenos naturales siguen el mismo patrón? <br>
+                    Descubre la "Forma de la Naturaleza" con <span class="font-semibold text-innovaGreen">Innova Schools</span>.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-left">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-brand-500">
+                        <div class="text-brand-500 text-2xl mb-2 font-bold">1. Simetría</div>
+                        <p class="text-gray-600">Como un espejo. El lado izquierdo es idéntico al derecho, centrados en el promedio.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-accent">
+                        <div class="text-accent text-2xl mb-2 font-bold">2. Centro</div>
+                        <p class="text-gray-600">La Media, Mediana y Moda coinciden en la cima de la montaña.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-innovaGreen">
+                        <div class="text-innovaGreen text-2xl mb-2 font-bold">3. Frecuencia</div>
+                        <p class="text-gray-600">La mayoría de los datos están cerca del centro. Los extremos son raros.</p>
+                    </div>
+                </div>
+
+                <button onclick="navTo('anatomy')" class="mt-8 px-8 py-4 bg-brand-500 text-white rounded-full font-bold text-lg shadow-lg hover:bg-brand-600 hover:scale-105 transition-transform flex items-center justify-center mx-auto gap-2">
+                    Comenzar Exploración <span>➜</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION 2: ANATOMY (Interactive Lab) -->
+        <section id="section-anatomy" class="hidden p-6 max-w-7xl mx-auto space-y-8">
+            <div class="text-center max-w-3xl mx-auto mb-8">
+                <h2 class="text-3xl font-bold text-slate-800">La Anatomía de la Curva</h2>
+                <p class="text-lg text-slate-600 mt-4">
+                    La Distribución Normal se define por dos parámetros: la <span class="font-bold text-brand-500">Media (μ)</span> y la <span class="font-bold text-accent">Desviación Estándar (σ)</span>.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <!-- Controls -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 lg:col-span-1">
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2 text-brand-900">
+                        <span>🎛️</span> Panel de Control
+                    </h3>
+                    
+                    <div class="mb-8">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Media (<span class="italic">μ</span>) = <span id="val-mean" class="font-bold text-brand-500">0</span>
+                        </label>
+                        <input type="range" id="slider-mean" min="-5" max="5" step="0.5" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        <p class="text-xs text-gray-500 mt-2">Mueve el centro de la curva.</p>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Desviación Estándar (<span class="italic">σ</span>) = <span id="val-std" class="font-bold text-accent">1</span>
+                        </label>
+                        <input type="range" id="slider-std" min="0.5" max="3" step="0.1" value="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent">
+                        <p class="text-xs text-gray-500 mt-2">Controla la dispersión (anchura).</p>
+                    </div>
+
+                    <div class="bg-brand-50 p-4 rounded-lg border border-brand-100 text-sm text-brand-900">
+                        <strong>Nota Técnica:</strong><br>
+                        Una <span class="italic text-accent font-bold">σ</span> pequeña = datos agrupados (pico alto).<br> 
+                        Una <span class="italic text-accent font-bold">σ</span> grande = datos dispersos (curva plana).
+                    </div>
+                </div>
+
+                <!-- Visualization -->
+                <div class="lg:col-span-2">
+                    <div class="chart-container chart-wrapper-lg mx-auto">
+                        <canvas id="anatomyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: EMPIRICAL RULE -->
+        <section id="section-empirical" class="hidden p-6 max-w-7xl mx-auto space-y-8">
+            <div class="text-center max-w-3xl mx-auto mb-4">
+                <h2 class="text-3xl font-bold text-slate-800">La Regla Empírica (68-95-99.7)</h2>
+                <p class="text-lg text-slate-600 mt-4">
+                    Predice porcentajes de probabilidad basándote en la desviación estándar.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="chart-container chart-wrapper-std mx-auto order-2 md:order-1">
+                    <!-- Plotly container -->
+                    <div id="empiricalChart" class="w-full h-full"></div>
+                </div>
+                
+                <div class="space-y-6 order-1 md:order-2">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brand-500 hover:bg-gray-50 transition-colors cursor-default group">
+                        <h3 class="text-xl font-bold text-brand-500">68% de los datos</h3>
+                        <p class="text-gray-600">Están a <span class="font-bold">1 desviación estándar</span> del promedio.</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-innovaGreen hover:bg-gray-50 transition-colors cursor-default">
+                        <h3 class="text-xl font-bold text-innovaGreen">95% de los datos</h3>
+                        <p class="text-gray-600">Están a <span class="font-bold">2 desviaciones estándar</span>.</p>
+                        <p class="text-sm text-gray-400 mt-2">Lo "normal" cae dentro de este rango.</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-accent hover:bg-gray-50 transition-colors cursor-default">
+                        <h3 class="text-xl font-bold text-accent">99.7% de los datos</h3>
+                        <p class="text-gray-600">Están a <span class="font-bold">3 desviaciones estándar</span>.</p>
+                        <p class="text-sm text-gray-400 mt-2">Fuera de aquí están los "Outliers" (casos raros).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: REAL LIFE & DAILY USE -->
+        <section id="section-realworld" class="hidden p-6 max-w-7xl mx-auto">
+             <div class="text-center max-w-3xl mx-auto mb-10">
+                <h2 class="text-3xl font-bold text-slate-800">En la Vida Diaria</h2>
+                <p class="text-lg text-slate-600 mt-4">
+                    La distribución normal está en todas partes. Haz clic para explorar ejemplos.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: Estatura -->
+                <div onclick="showDetail('height')" class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 card-hover cursor-pointer group">
+                    <div class="bg-innovaGreen-light w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-green-200 transition-colors">📏</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Biología y Salud</h3>
+                    <p class="text-gray-500 text-sm">Estatura, presión arterial, peso al nacer.</p>
+                    <div class="mt-4 text-brand-500 font-semibold text-sm">Ver ejemplo ➜</div>
+                </div>
+
+                 <!-- Card 2: IQ / Scores -->
+                 <div onclick="showDetail('scores')" class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 card-hover cursor-pointer group">
+                    <div class="bg-brand-100 w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-blue-200 transition-colors">🧠</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Tests y Educación</h3>
+                    <p class="text-gray-500 text-sm">Resultados de exámenes (SAT, IQ).</p>
+                    <div class="mt-4 text-brand-500 font-semibold text-sm">Ver ejemplo ➜</div>
+                </div>
+
+                 <!-- Card 3: Manufacturing -->
+                 <div onclick="showDetail('factory')" class="bg-white p-6 rounded-2xl shadow-md border border-gray-100 card-hover cursor-pointer group">
+                    <div class="bg-accent-light w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-orange-200 transition-colors">⚙️</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Control de Calidad</h3>
+                    <p class="text-gray-500 text-sm">Peso de productos, tamaño de piezas.</p>
+                    <div class="mt-4 text-brand-500 font-semibold text-sm">Ver ejemplo ➜</div>
+                </div>
+            </div>
+
+            <!-- Detail Box (Dynamic Content) -->
+            <div id="detail-box" class="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hidden animate-fade-in">
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 id="detail-title" class="text-2xl font-bold text-brand-900 mb-4">Título</h3>
+                        <p id="detail-desc" class="text-gray-600 leading-relaxed mb-4">Descripción...</p>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <span class="font-bold text-innovaGreen">Dato Curioso:</span> <span id="detail-fact" class="text-slate-600">...</span>
+                        </div>
+                    </div>
+                    <div class="chart-container chart-wrapper-std h-64 flex items-center justify-center bg-gray-50">
+                        <canvas id="detailChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: RESEARCH & SIMULATION -->
+        <section id="section-research" class="hidden p-6 max-w-7xl mx-auto space-y-8">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-3xl font-bold text-slate-800">En la Investigación</h2>
+                <p class="text-lg text-slate-600 mt-4">
+                    Demostración del <strong>Teorema del Límite Central</strong>.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div class="p-4 bg-brand-50 border-b border-brand-100 flex justify-between items-center flex-wrap gap-4">
+                    <div class="font-bold text-brand-900">🔬 Simulador de Investigación</div>
+                    <div class="flex gap-2">
+                        <button onclick="addSample()" class="btn-primary px-4 py-2 rounded shadow transition-transform active:scale-95 text-sm font-semibold">
+                            + Tomar 1 Muestra
+                        </button>
+                        <button onclick="addManySamples()" class="btn-accent px-4 py-2 rounded shadow transition-transform active:scale-95 text-sm font-semibold">
+                            🚀 Acelerar (x100)
+                        </button>
+                        <button onclick="resetSimulation()" class="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                            Reiniciar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 p-6 gap-6">
+                    <div class="lg:col-span-2">
+                        <div class="chart-container chart-wrapper-std mx-auto">
+                             <canvas id="researchChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 rounded-lg border-l-4 border-innovaGreen">
+                            <h4 class="font-bold text-slate-700 mb-2">Estadísticas</h4>
+                            <ul class="space-y-2 text-sm">
+                                <li class="flex justify-between"><span>Muestras:</span> <span id="sim-count" class="font-mono font-bold text-brand-500">0</span></li>
+                                <li class="flex justify-between"><span>Promedio Global:</span> <span id="sim-mean" class="font-mono">0</span></li>
+                            </ul>
+                        </div>
+                        <p class="text-sm text-gray-500 italic">
+                            Observa: Al tomar más muestras, las barras azules formarán la campana perfecta, tal como ocurre en los estudios científicos reales.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-auto py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+            <p class="font-semibold text-brand-500 mb-2">Innova Schools Ojo de Agua</p>
+            <p>Tecnología Educativa - Estadística Interactiva</p>
+        </div>
+    </footer>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        // --- GLOBAL STATE ---
+        const state = {
+            currentSection: 'intro',
+            mean: 0,
+            stdDev: 1,
+            simulationData: [],
+            charts: {} 
+        };
+
+        // --- MATH UTILITIES ---
+        function normalPDF(x, mean, stdDev) {
+            const exponent = -0.5 * Math.pow((x - mean) / stdDev, 2);
+            return (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(exponent);
+        }
+
+        function generateNormalPoints(mean, stdDev, min = -5, max = 5, step = 0.1) {
+            let labels = [];
+            let data = [];
+            for (let x = min; x <= max; x += step) {
+                // Round x to avoid float errors in labels
+                let labelVal = Math.round(x * 10) / 10;
+                labels.push(labelVal);
+                data.push(normalPDF(x, mean, stdDev));
+            }
+            return { labels, data };
+        }
+
+        // --- NAVIGATION LOGIC ---
+        function navTo(sectionId) {
+            state.currentSection = sectionId;
+
+            const sections = ['intro', 'anatomy', 'empirical', 'realworld', 'research'];
+            sections.forEach(s => {
+                document.getElementById(`section-${s}`).classList.add('hidden');
+                const btn = document.getElementById(`btn-${s}`);
+                if(btn) btn.classList.remove('active');
+            });
+
+            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+            
+            const activeBtn = document.getElementById(`btn-${sectionId}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            if (sectionId === 'anatomy') renderAnatomyChart();
+            if (sectionId === 'empirical') renderEmpiricalChart();
+            if (sectionId === 'research' && !state.charts.research) initResearchChart();
+            
+            document.getElementById('mobile-menu').classList.add('hidden');
+            window.scrollTo(0,0);
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- SECTION 2: ANATOMY CHART (Chart.js) ---
+        function renderAnatomyChart() {
+            const ctx = document.getElementById('anatomyChart').getContext('2d');
+            const m = parseFloat(document.getElementById('slider-mean').value);
+            const s = parseFloat(document.getElementById('slider-std').value);
+            
+            const rangeMin = -6;
+            const rangeMax = 6;
+            const points = generateNormalPoints(m, s, rangeMin, rangeMax, 0.2);
+
+            document.getElementById('val-mean').innerText = m;
+            document.getElementById('val-std').innerText = s;
+
+            if (state.charts.anatomy) {
+                state.charts.anatomy.data.labels = points.labels;
+                state.charts.anatomy.data.datasets[0].data = points.data;
+                state.charts.anatomy.update();
+            } else {
+                state.charts.anatomy = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: points.labels,
+                        datasets: [{
+                            label: 'Curva Normal',
+                            data: points.data,
+                            borderColor: '#005788', // Azul Innova
+                            backgroundColor: 'rgba(0, 87, 136, 0.2)',
+                            borderWidth: 3,
+                            fill: true,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Densidad' } },
+                            x: { title: { display: true, text: 'Valor (x)' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        document.getElementById('slider-mean').addEventListener('input', renderAnatomyChart);
+        document.getElementById('slider-std').addEventListener('input', renderAnatomyChart);
+
+
+        // --- SECTION 3: EMPIRICAL RULE (Plotly.js) ---
+        function renderEmpiricalChart() {
+            if(document.getElementById('empiricalChart').data) return;
+
+            const xValues = [];
+            const yValues = [];
+            const mean = 0;
+            const std = 1;
+            
+            for (let i = -4; i <= 4; i += 0.05) {
+                xValues.push(i);
+                yValues.push(normalPDF(i, mean, std));
+            }
+
+            const trace1 = {
+                x: xValues,
+                y: yValues,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#334155', width: 2 },
+                name: 'Curva',
+                hoverinfo: 'none'
+            };
+
+            const layout = {
+                title: 'Áreas bajo la curva (Standard Z)',
+                font: { family: 'Inter, sans-serif' },
+                autosize: true,
+                margin: { l: 40, r: 20, t: 40, b: 40 },
+                showlegend: false,
+                xaxis: { title: 'Desviaciones Estándar (Z)' },
+                yaxis: { showticklabels: false, title: '' },
+                shapes: [
+                    { type: 'line', x0: 0, y0: 0, x1: 0, y1: 0.4, line: { color: 'grey', width: 1, dash: 'dot' } },
+                    { type: 'line', x0: -1, y0: 0, x1: -1, y1: normalPDF(-1,0,1), line: { color: '#F28E00', width: 1 } },
+                    { type: 'line', x0: 1, y0: 0, x1: 1, y1: normalPDF(1,0,1), line: { color: '#F28E00', width: 1 } },
+                      { type: 'line', x0: -2, y0: 0, x1: -2, y1: normalPDF(-2,0,1), line: { color: '#F28E00', width: 1 } },
+                      { type: 'line', x0: 2, y0: 0, x1: 2, y1: normalPDF(2,0,1), line: { color: '#F28E00', width: 1 } },
+                ],
+                annotations: [
+                    { x: 0, y: 0.15, text: '68%', font: {size: 20, color: '#005788'}, showarrow: false },
+                    { x: 1.5, y: 0.05, text: '13.5%', showarrow: false },
+                    { x: -1.5, y: 0.05, text: '13.5%', showarrow: false },
+                ]
+            };
+
+            Plotly.newPlot('empiricalChart', [trace1], layout, {displayModeBar: false, responsive: true});
+        }
+
+
+        // --- SECTION 4: REAL LIFE CONTENT ---
+        const detailData = {
+            height: {
+                title: 'Estatura Humana',
+                desc: 'Si mides a 1000 personas, la mayoría se agrupa alrededor del promedio. Muy pocos son extremadamente altos o bajos.',
+                fact: 'Este patrón es universal en biología.',
+                mean: 170, std: 7, label: 'Estatura (cm)', min: 145, max: 195
+            },
+            scores: {
+                title: 'Coeficiente Intelectual (IQ)',
+                desc: 'Las pruebas de inteligencia están diseñadas para seguir una distribución normal con Media=100.',
+                fact: 'Solo el 2% tiene un IQ superior a 130.',
+                mean: 100, std: 15, label: 'Puntaje IQ', min: 55, max: 145
+            },
+            factory: {
+                title: 'Control de Calidad',
+                desc: 'El peso de los productos industriales varía ligeramente, formando una curva de campana.',
+                fact: 'Se busca reducir la variación para asegurar calidad.',
+                mean: 200, std: 2, label: 'Peso (g)', min: 190, max: 210
+            }
+        };
+
+        function showDetail(key) {
+            const data = detailData[key];
+            const box = document.getElementById('detail-box');
+            
+            document.getElementById('detail-title').innerText = data.title;
+            document.getElementById('detail-desc').innerText = data.desc;
+            document.getElementById('detail-fact').innerText = data.fact;
+
+            box.classList.remove('hidden');
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            const ctx = document.getElementById('detailChart').getContext('2d');
+            const points = generateNormalPoints(data.mean, data.std, data.min, data.max, (data.max-data.min)/50);
+
+            if (state.charts.detail) {
+                state.charts.detail.destroy();
+            }
+
+            state.charts.detail = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: points.labels,
+                    datasets: [{
+                        label: data.label,
+                        data: points.data,
+                        backgroundColor: 'rgba(242, 142, 0, 0.2)', // Naranja Innova
+                        borderColor: '#F28E00',
+                        borderWidth: 2,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { display: false }, x: { ticks: { maxTicksLimit: 5 } } }
+                }
+            });
+        }
+
+
+        // --- SECTION 5: RESEARCH SIMULATION ---
+        function initResearchChart() {
+            const ctx = document.getElementById('researchChart').getContext('2d');
+            const bins = [];
+            for(let i=-4; i<=4; i+=0.5) bins.push(i);
+            const initialData = new Array(bins.length).fill(0);
+
+            state.charts.research = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: bins,
+                    datasets: [{
+                        label: 'Frecuencia',
+                        data: initialData,
+                        backgroundColor: '#005788', // Azul Innova
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Frecuencia' } },
+                        x: { title: { display: true, text: 'Valor Promedio' } }
+                    },
+                    animation: { duration: 300 }
+                }
+            });
+        }
+
+        function randomNormal() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random(); 
+            while(v === 0) v = Math.random();
+            return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+        }
+
+        function addSample() { updateSimulation(1); }
+        function addManySamples() { updateSimulation(100); }
+
+        function updateSimulation(count) {
+            const chart = state.charts.research;
+            if(!chart) return;
+
+            const newDataPoints = [];
+            for(let k=0; k<count; k++) {
+                newDataPoints.push(randomNormal());
+            }
+            state.simulationData.push(...newDataPoints);
+            
+            const bins = chart.data.labels;
+            const frequencies = new Array(bins.length).fill(0);
+            
+            state.simulationData.forEach(val => {
+                let binIndex = -1;
+                for(let i=0; i<bins.length-1; i++) {
+                    if (val >= bins[i] && val < bins[i+1]) {
+                        binIndex = i;
+                        break;
+                    }
+                }
+                if (val < bins[0]) binIndex = 0;
+                if (val > bins[bins.length-1]) binIndex = bins.length-1;
+                if(binIndex !== -1) frequencies[binIndex]++;
+            });
+
+            chart.data.datasets[0].data = frequencies;
+            chart.update();
+
+            document.getElementById('sim-count').innerText = state.simulationData.length;
+            const total = state.simulationData.reduce((a, b) => a + b, 0);
+            const mean = total / state.simulationData.length;
+            document.getElementById('sim-mean').innerText = mean.toFixed(3);
+        }
+
+        function resetSimulation() {
+            state.simulationData = [];
+            const chart = state.charts.research;
+            if(chart) {
+                chart.data.datasets[0].data = new Array(chart.data.labels.length).fill(0);
+                chart.update();
+            }
+            document.getElementById('sim-count').innerText = "0";
+            document.getElementById('sim-mean').innerText = "0";
+        }
+    </script>
+</body>
+</html>
